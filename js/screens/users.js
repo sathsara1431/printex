@@ -13,6 +13,8 @@
 // =====================================================================
 
 import { escapeHtml, formatDate, formatTime } from '../helpers.js';
+import { loginNameFromEmail, isUsernameLogin } from '../usernames.js';
+import { USERNAME_DOMAIN } from '../config.js';
 
 const ROLES = [
   { value: 'owner',   label: 'Owner'   },
@@ -34,12 +36,18 @@ export async function render(main, { db, user }) {
     <details class="card help">
       <summary>How to add a new person</summary>
       <ol>
-        <li>In Supabase, open <b>Authentication → Users</b>.</li>
-        <li>Click <b>Add user → Create new user</b>, enter their email and a password,
-            tick <b>Auto Confirm User</b>, and click <b>Create user</b>.</li>
+        <li>Choose a username: lower-case letters, numbers, dots or underscores only
+            (e.g. <b>kamal</b> or <b>kamal.s</b>).</li>
+        <li>In Supabase, open <b>Authentication → Users</b> and click
+            <b>Add user → Create new user</b>.</li>
+        <li>For <b>Email</b>, type the username followed by
+            <b>@${escapeHtml(USERNAME_DOMAIN)}</b> (e.g. <b>kamal@${escapeHtml(USERNAME_DOMAIN)}</b>).
+            Enter a password, tick <b>Auto Confirm User</b>, and click <b>Create user</b>.</li>
         <li>Come back here and refresh. They appear as <b>Inactive</b> Staff.</li>
         <li>Click <b>Edit</b>, type their name, choose their role, tick <b>Active</b>, and save.</li>
+        <li>They sign in with just their username (e.g. <b>kamal</b>) and password.</li>
       </ol>
+      <p class="muted">A person with a real email can still be added with that email instead.</p>
       <p class="muted">To remove someone, untick <b>Active</b>. Don't delete their login,
          because their sales, payments and attendance must stay linked to them.</p>
     </details>`;
@@ -93,7 +101,9 @@ export async function render(main, { db, user }) {
         <div class="row-main">
           <div>
             <div class="row-title">${escapeHtml(p.full_name || '(no name)')}${isMe ? ' <span class="muted">(you)</span>' : ''}</div>
-            <div class="muted small">${escapeHtml(p.email)}</div>
+            <div class="muted small">${isUsernameLogin(p.email)
+              ? 'Username: ' + escapeHtml(loginNameFromEmail(p.email))
+              : escapeHtml(p.email)}</div>
             <div class="muted small">Last sign-in: ${lastSignIn(p.last_sign_in_at)}</div>
           </div>
           <div class="row-side">

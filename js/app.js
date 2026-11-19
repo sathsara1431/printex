@@ -13,6 +13,11 @@
 import { db, isConfigured, usingSecretKey } from './supabase.js';
 import { el } from './helpers.js';
 import { SCREENS, buildMenu, highlightMenu } from './menu.js';
+import { loginEmailFrom, loginNameFromEmail } from './usernames.js';
+
+// One message for a wrong username, wrong email OR wrong password,
+// so nobody can find out which usernames exist.
+const WRONG_LOGIN = 'Wrong username, email or password. Please try again.';
 
 let allowedScreens = null;   // the list from my_menu(); null when signed out
 let currentUser = null;
@@ -45,11 +50,12 @@ function showLoginMessage(text) {
 function friendlyLoginError(error) {
   const code = error.code || '';
   const text = (error.message || '').toLowerCase();
-  if (code === 'invalid_credentials' || text.includes('invalid login credentials')) {
-    return 'Wrong email or password. Please try again.';
-  }
   if (code === 'email_not_confirmed' || text.includes('email not confirmed')) {
     return 'This account is not confirmed yet. Please contact the owner.';
+  }
+  if (code === 'invalid_credentials' || text.includes('invalid login credentials')
+      || code === 'validation_failed' || error.status === 400) {
+    return WRONG_LOGIN;
   }
   if (error.status === 0 || text.includes('fetch') || text.includes('network')) {
     return "Can't connect. Please check your internet connection and try again.";
@@ -62,10 +68,17 @@ function friendlyLoginError(error) {
 
 async function handleLogin(event) {
   event.preventDefault();
-  const email = el('#login-email').value.trim();
+  const typed = el('#login-email').value.trim();
   const password = el('#login-password').value;
-  if (!email || !password) {
-    showLoginMessage('Please enter your email and password.');
+  if (!typed || !password) {
+    showLoginMessage('Please enter your username (or email) and password.');
+    return;
+  }
+
+  // "kamal" → "kamal@printex.invalid"; a normal email stays as it is.
+  const email = loginEmailFrom(typed);
+  if (!email) {
+    showLoginMessage(WRONG_LOGIN);   // not a possible username, so it can't be right
     return;
   }
 
@@ -125,7 +138,7 @@ async function startApp(user) {
 async function showUserName(user) {
   el('#user-name').textContent = '';
   const { data } = await db.from('profiles').select('full_name').eq('id', user.id).maybeSingle();
-  el('#user-name').textContent = data?.full_name || user.email;
+  el('#user-name').textContent = data?.full_name || loginNameFromEmail(user.email);
 }
 
 // ---------- Opening screens ----------

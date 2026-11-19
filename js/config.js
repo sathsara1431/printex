@@ -15,3 +15,17 @@
 
 export const SUPABASE_URL = 'https://ixhrirxlxcvilagdzxar.supabase.co';
 export const SUPABASE_ANON_KEY = 'sb_publishable_4YPanlrZgZC10gDxcm9Lbw_vUwdJx4w';
+
+// =====================================================================
+//  USERNAME LOGINS
+// ---------------------------------------------------------------------
+//  Supabase logins always need an email address. For people who sign in
+//  with a USERNAME (e.g. "kamal"), the website quietly turns it into
+//  "kamal@" + this made-up domain. ".invalid" is reserved worldwide and
+//  can never receive mail, so these addresses are never real.
+//
+//  ⚠️ Don't change this after username accounts exist – their logins in
+//     Supabase use this exact domain.
+// =====================================================================
+
+export const USERNAME_DOMAIN = 'printex.invalid';

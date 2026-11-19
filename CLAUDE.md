@@ -210,7 +210,8 @@ All tables also have `created_by`, `created_at`, `updated_by`, `updated_at`.
 ```
 index.html           the only page: loading / login / inactive / app views
 css/style.css        all styling (phone first; menu on the left from 800px wide; dark mode)
-js/config.js         Supabase URL + anon (publishable) key – the ONLY place they go
+js/config.js         Supabase URL + anon (publishable) key + USERNAME_DOMAIN – the ONLY place they go
+js/usernames.js      username ↔ login email conversion
 js/supabase.js       creates the shared connection `db`; refuses a secret/service_role key
 js/helpers.js        formatMoney, formatDate, formatTime, escapeHtml, el, placeholderHtml
 js/menu.js           SCREENS list (name → label + file) and building the menu
@@ -229,7 +230,26 @@ supabase/schema.sql  tables, views, triggers, RLS rules, starting data
 - Screens are opened by the address after `#` (e.g. `#sales`). The allowed list comes only from
   `my_menu()`; an unknown or not-allowed `#name` silently goes to the first screen in the list.
 - `my_menu()` returning an empty list → "Your account is not active yet. Please contact the owner."
-- Wrong password → "Wrong email or password. Please try again."
+- Wrong username, email or password → one generic message:
+  "Wrong username, email or password. Please try again." (never reveal which usernames exist).
+
+### Username logins
+
+- The login box says **"Username or email"**. Input is trimmed and lower-cased.
+  - Contains `@` → used as a normal email (the Owner's original email login keeps working).
+  - Otherwise it must match `^[a-z0-9._]{1,50}$` and becomes `<username>@printex.invalid`.
+    Anything else gets the generic wrong-login message without contacting Supabase.
+- The made-up domain is `USERNAME_DOMAIN` in `js/config.js` (`.invalid` is reserved and can never
+  receive mail). **Never change it once username accounts exist.**
+- Shared code: `js/usernames.js` (`loginEmailFrom`, `loginNameFromEmail`, `isUsernameLogin`).
+- The Users screen shows "Username: kamal" instead of the made-up email; the top bar falls back
+  to the username when a profile has no name.
+- **Creating a username account (until the Users screen can do it):** Supabase → Authentication →
+  Users → Add user → Create new user → Email `kamal@printex.invalid`, a password, tick Auto Confirm
+  User → Create user. Then activate them on the Users screen.
+- Username accounts have no real mailbox, so "forgot password" emails can't work. The Owner resets
+  a password in Supabase → SQL Editor:
+  `update auth.users set encrypted_password = extensions.crypt('NewPassword', extensions.gen_salt('bf')) where email = 'kamal@printex.invalid';`
 - Never show role names, permission lists or "access denied" anywhere.
 
 ## Known limits of the free plans
