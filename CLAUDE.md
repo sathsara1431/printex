@@ -244,7 +244,9 @@ supabase/schema.sql  tables, views, triggers, RLS rules, starting data
 2. ✅ Create Supabase project, run `schema.sql` (tables, triggers, RLS, starting data),
    create the owner login, turn off sign-ups, mark that login as owner.
 3. ✅ Login screen + app layout + menu built from what the user may use.
-4. Users screen.
+4. ✅ Users screen (`js/screens/users.js`): list from `list_users()`; Owner edits name, role,
+   active via `profiles` update; help box explains adding logins in the Supabase dashboard;
+   reloads the page if the Owner changes their own role/active.
 5. Settings: expense categories and named discounts.
 6. Inventory: stock items, pack units, manual adjustments.
 7. Price list, including links to stock items.
