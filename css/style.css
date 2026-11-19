@@ -101,6 +101,19 @@ h1 { font-size: 1.4rem; margin: 0 0 1rem; }
 .badge.good { background: var(--good-bg); color: var(--good-text); }
 .badge.off  { background: var(--error-bg); color: var(--error-text); }
 
+/* ---------- Sections and "add" forms (e.g. Settings) ---------- */
+h2 { font-size: 1.15rem; margin: 0 0 0.25rem; }
+.section { margin-bottom: 2rem; }
+.add-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+}
+.add-form label { flex: 1 1 200px; margin: 0; }
+.add-form label.narrow { flex: 0 1 140px; }
+
 /* ---------- Help boxes that open and close ---------- */
 .help { margin-top: 1rem; }
 .help summary { cursor: pointer; font-weight: 600; }

@@ -213,7 +213,8 @@ css/style.css        all styling (phone first; menu on the left from 800px wide;
 js/config.js         Supabase URL + anon (publishable) key + USERNAME_DOMAIN – the ONLY place they go
 js/usernames.js      username ↔ login email conversion
 js/supabase.js       creates the shared connection `db`; refuses a secret/service_role key
-js/helpers.js        formatMoney, formatDate, formatTime, escapeHtml, el, placeholderHtml
+js/helpers.js        formatMoney, formatDate, formatTime, escapeHtml, el, placeholderHtml,
+                     parseMoneyInput (typed "1,250.50" → 1250.5), showNotice (green/red message)
 js/menu.js           SCREENS list (name → label + file) and building the menu
 js/app.js            login, my_menu(), menu, opening screens by #address, sign out
 js/screens/*.js      one file per screen, each exports render(main, { db, user }):
@@ -267,7 +268,10 @@ supabase/schema.sql  tables, views, triggers, RLS rules, starting data
 4. ✅ Users screen (`js/screens/users.js`): list from `list_users()`; Owner edits name, role,
    active via `profiles` update; help box explains adding logins in the Supabase dashboard;
    reloads the page if the Owner changes their own role/active.
-5. Settings: expense categories and named discounts.
+5. ✅ Settings (`js/screens/settings.js`): expense categories (add, rename, remove; a used
+   category is hidden via `archived` and can be brought back) and named discounts (add, edit
+   name/amount/on-off, remove; a used discount is switched off instead). "Used" is detected by the
+   database refusing the delete (foreign key error `23503`). No starting discounts (owner's choice).
 6. Inventory: stock items, pack units, manual adjustments.
 7. Price list, including links to stock items.
 8. Customers.
@@ -282,5 +286,4 @@ supabase/schema.sql  tables, views, triggers, RLS rules, starting data
 
 ## Open questions (update when answered)
 
-- Named discounts: none set up yet; the owner will add them in Settings.
 - Graphic design prices: to be entered by the owner (items start switched off at Rs. 0).

@@ -12,7 +12,7 @@
 //  This is the ONLY screen where roles are ever shown.
 // =====================================================================
 
-import { escapeHtml, formatDate, formatTime } from '../helpers.js';
+import { escapeHtml, formatDate, formatTime, showNotice } from '../helpers.js';
 import { loginNameFromEmail, isUsernameLogin } from '../usernames.js';
 import { USERNAME_DOMAIN } from '../config.js';
 
@@ -55,12 +55,7 @@ export async function render(main, { db, user }) {
   const listBox = main.querySelector('#users-list');
   const messageBox = main.querySelector('#users-message');
 
-  function showMessage(text, type) {
-    messageBox.textContent = text;
-    messageBox.className = 'notice ' + type;
-    messageBox.hidden = false;
-    messageBox.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
+  const showMessage = (text, type) => showNotice(messageBox, text, type);
 
   async function loadUsers() {
     const { data, error } = await db.rpc('list_users');

@@ -6,6 +6,8 @@
 //  formatTime('2026-11-19T04:00:00Z') → "9:30 AM"  (Sri Lanka time)
 //  escapeHtml(text)             → makes text safe to put on the page
 //  el('#id')                    → finds something on the page
+//  parseMoneyInput('1,250.5')   → 1250.5   (null if it isn't a valid amount)
+//  showNotice(box, text, 'good' or 'error') → shows a green or red message
 // =====================================================================
 
 const TIME_ZONE = 'Asia/Colombo';
@@ -50,6 +52,22 @@ export function escapeHtml(text) {
 
 // Shortcut for finding one thing on the page.
 export const el = (selector) => document.querySelector(selector);
+
+// Read a rupee amount typed by a person, e.g. "1,250", "Rs. 99.50" → 1250, 99.5.
+// Returns null if it isn't a proper amount (no letters, at most 2 decimals).
+export function parseMoneyInput(text) {
+  const cleaned = String(text ?? '').replace(/rs\.?/i, '').replaceAll(',', '').trim();
+  return /^\d+(\.\d{1,2})?$/.test(cleaned) ? Number(cleaned) : null;
+}
+
+// Show a message in a box: type 'good' (green) or 'error' (red).
+// The page scrolls so the message can be seen.
+export function showNotice(box, text, type) {
+  box.textContent = text;
+  box.className = 'notice ' + type;
+  box.hidden = false;
+  box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
 
 // A simple "coming soon" box, used by screens that aren't built yet.
 export function placeholderHtml(title) {
