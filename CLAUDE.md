@@ -214,7 +214,8 @@ js/config.js         Supabase URL + anon (publishable) key + USERNAME_DOMAIN –
 js/usernames.js      username ↔ login email conversion
 js/supabase.js       creates the shared connection `db`; refuses a secret/service_role key
 js/helpers.js        formatMoney, formatDate, formatTime, escapeHtml, el, placeholderHtml,
-                     parseMoneyInput (typed "1,250.50" → 1250.5), showNotice (green/red message)
+                     parseMoneyInput (typed "1,250.50" → 1250.5), showNotice (green/red message),
+                     parseNumberInput (up to 3 decimals), formatNumber ("1,250.5")
 js/menu.js           SCREENS list (name → label + file) and building the menu
 js/app.js            login, my_menu(), menu, opening screens by #address, sign out
 js/screens/*.js      one file per screen, each exports render(main, { db, user }):
@@ -272,7 +273,14 @@ supabase/schema.sql  tables, views, triggers, RLS rules, starting data
    category is hidden via `archived` and can be brought back) and named discounts (add, edit
    name/amount/on-off, remove; a used discount is switched off instead). "Used" is detected by the
    database refusing the delete (foreign key error `23503`). No starting discounts (owner's choice).
-6. Inventory: stock items, pack units, manual adjustments.
+6. ✅ Inventory (`js/screens/inventory.js`): stock list with amount left in base units plus packs
+   ("1,250 sheets (2 reams + 250 sheets)"), Low stock / Below zero badges and a summary at the top.
+   "Add / remove stock": Bought more (+), Spoiled or wasted (−), I counted the stock (the website
+   reads the latest quantity and inserts the difference as a `correction`); amount in base units or
+   packs; a note is required. History shows the latest 30 movements with who and when; manual ones
+   can be undone (deletes the movement; the trigger puts the quantity back). Add/edit items (name,
+   base unit, optional pack unit + size, low-stock level, in use). Remove = delete, or switch off
+   if it has history or price-list links (foreign key error `23503`).
 7. Price list, including links to stock items.
 8. Customers.
 9. Sales and payments (price-change flags, automatic stock updates).

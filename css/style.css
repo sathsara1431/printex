@@ -114,6 +114,32 @@ h2 { font-size: 1.15rem; margin: 0 0 0.25rem; }
 .add-form label { flex: 1 1 200px; margin: 0; }
 .add-form label.narrow { flex: 0 1 140px; }
 
+/* ---------- Coloured text, side-by-side fields, history lists ---------- */
+.error-text { color: var(--error-text); font-weight: 600; }
+.good-text  { color: var(--good-text); }
+
+.field-pair { display: flex; flex-wrap: wrap; gap: 0 0.75rem; }
+.field-pair > label { flex: 1 1 160px; }
+
+.push-right { margin-left: auto; }
+
+.add-panel { margin-bottom: 1rem; }
+.add-panel summary { cursor: pointer; font-weight: 600; color: var(--primary); }
+.add-panel form { max-width: 420px; }
+
+.history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.history-row:first-child { border-top: none; }
+.history-row .button { flex-shrink: 0; }
+.button.small { white-space: nowrap; }
+
 /* ---------- Help boxes that open and close ---------- */
 .help { margin-top: 1rem; }
 .help summary { cursor: pointer; font-weight: 600; }

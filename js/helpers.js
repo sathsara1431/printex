@@ -7,6 +7,8 @@
 //  escapeHtml(text)             → makes text safe to put on the page
 //  el('#id')                    → finds something on the page
 //  parseMoneyInput('1,250.5')   → 1250.5   (null if it isn't a valid amount)
+//  parseNumberInput('1,000')    → 1000     (whole or up to 3 decimals; null if not a number)
+//  formatNumber(1250.5)         → "1,250.5"
 //  showNotice(box, text, 'good' or 'error') → shows a green or red message
 // =====================================================================
 
@@ -58,6 +60,20 @@ export const el = (selector) => document.querySelector(selector);
 export function parseMoneyInput(text) {
   const cleaned = String(text ?? '').replace(/rs\.?/i, '').replaceAll(',', '').trim();
   return /^\d+(\.\d{1,2})?$/.test(cleaned) ? Number(cleaned) : null;
+}
+
+// Read a quantity typed by a person, e.g. "1,000" or "2.5" (not negative).
+// Returns null if it isn't a proper number (at most 3 decimals).
+export function parseNumberInput(text) {
+  const cleaned = String(text ?? '').replaceAll(',', '').trim();
+  return /^\d+(\.\d{1,3})?$/.test(cleaned) ? Number(cleaned) : null;
+}
+
+const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
+
+// A quantity with thousands commas, e.g. 1250.5 → "1,250.5".
+export function formatNumber(value) {
+  return numberFormat.format(Number(value) || 0);
 }
 
 // Show a message in a box: type 'good' (green) or 'error' (red).
