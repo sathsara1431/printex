@@ -13,5 +13,5 @@
 //     in this file or anywhere in this folder.
 // =====================================================================
 
-export const SUPABASE_URL = 'PASTE-YOUR-PROJECT-URL-HERE';
-export const SUPABASE_ANON_KEY = 'PASTE-YOUR-ANON-KEY-HERE';
+export const SUPABASE_URL = 'https://ixhrirxlxcvilagdzxar.supabase.co';
+export const SUPABASE_ANON_KEY = 'sb_publishable_4YPanlrZgZC10gDxcm9Lbw_vUwdJx4w';
