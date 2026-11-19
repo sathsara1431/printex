@@ -1,0 +1,45 @@
+# =====================================================================
+#  Files git must NEVER upload to GitHub.
+#  The GitHub repository is public, so anything secret or private stays here.
+#  (Each line is a file name or pattern; * means "anything".)
+# =====================================================================
+
+# --- Secrets --------------------------------------------------------
+# Files that hold passwords or secret keys (service_role / secret key,
+# database password). Keep secrets ONLY in files with these names.
+.env
+.env.*
+*.env
+*.secret
+*.secrets
+*secret*
+*service_role*
+*password*
+*.pem
+*.key
+supabase/.env
+supabase/.temp/
+supabase/.branches/
+
+# NOTE: js/config.js (Supabase URL + anon/publishable key) is meant to be
+# uploaded – that key is safe to share. Never put the service_role key there.
+
+# --- Business data --------------------------------------------------
+# CSV backups contain customer and money records – keep them off GitHub.
+*.csv
+backups/
+
+# --- Junk from Windows, Mac, editors and tools ----------------------
+Thumbs.db
+desktop.ini
+.DS_Store
+*.tmp
+*.log
+*.bak
+~$*
+.vscode/
+.idea/
+node_modules/
+
+# --- Claude Code personal settings ----------------------------------
+.claude/settings.local.json
