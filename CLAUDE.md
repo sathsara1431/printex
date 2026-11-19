@@ -208,15 +208,29 @@ All tables also have `created_by`, `created_at`, `updated_by`, `updated_at`.
 ## Planned files
 
 ```
-index.html           single page app (login + all screens)
-css/style.css        all styling
-js/config.js         Supabase URL + anon key
-js/app.js            login, building the menu, navigation, shared helpers (money/date format)
-js/dashboard.js      js/customers.js   js/sales.js       js/pricelist.js
-js/discounts.js      js/inventory.js   js/expenses.js    js/attendance.js
-js/users.js          js/activity.js    js/export.js
+index.html           the only page: loading / login / inactive / app views
+css/style.css        all styling (phone first; menu on the left from 800px wide; dark mode)
+js/config.js         Supabase URL + anon (publishable) key – the ONLY place they go
+js/supabase.js       creates the shared connection `db`; refuses a secret/service_role key
+js/helpers.js        formatMoney, formatDate, formatTime, escapeHtml, el, placeholderHtml
+js/menu.js           SCREENS list (name → label + file) and building the menu
+js/app.js            login, my_menu(), menu, opening screens by #address, sign out
+js/screens/*.js      one file per screen, each exports render(main, { db, user }):
+                     dashboard, sales, customers, attendance, expenses, inventory,
+                     pricelist, settings (categories + discounts), users, activity, backup
 supabase/schema.sql  tables, views, triggers, RLS rules, starting data
 ```
+
+### How the website works (step 3)
+
+- Supabase JS is loaded in `index.html` from jsDelivr, pinned to `@supabase/supabase-js@2.45.4`.
+  JavaScript files are ES modules (`type="module"`), so the site must be opened through a web
+  server (XAMPP `http://localhost/printex/` or GitHub Pages), not by double-clicking the file.
+- Screens are opened by the address after `#` (e.g. `#sales`). The allowed list comes only from
+  `my_menu()`; an unknown or not-allowed `#name` silently goes to the first screen in the list.
+- `my_menu()` returning an empty list → "Your account is not active yet. Please contact the owner."
+- Wrong password → "Wrong email or password. Please try again."
+- Never show role names, permission lists or "access denied" anywhere.
 
 ## Known limits of the free plans
 
@@ -227,9 +241,9 @@ supabase/schema.sql  tables, views, triggers, RLS rules, starting data
 ## Build order
 
 1. ✅ Owner creates GitHub and Supabase accounts (done).
-2. 🔄 Create Supabase project, run `schema.sql` (tables, triggers, RLS, starting data),
+2. ✅ Create Supabase project, run `schema.sql` (tables, triggers, RLS, starting data),
    create the owner login, turn off sign-ups, mark that login as owner.
-3. Login screen + app layout + menu built from what the user may use.
+3. ✅ Login screen + app layout + menu built from what the user may use.
 4. Users screen.
 5. Settings: expense categories and named discounts.
 6. Inventory: stock items, pack units, manual adjustments.

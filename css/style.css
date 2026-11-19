@@ -1,0 +1,172 @@
+/* =====================================================================
+   style.css – HOW EVERYTHING LOOKS
+   Designed for phones first; on wider screens (computers) the menu
+   moves to the left side. Colours are set once at the top, with a
+   dark version for phones/computers that use dark mode.
+   ===================================================================== */
+
+:root {
+  --bg:          #f4f6f9;
+  --surface:     #ffffff;
+  --text:        #1d2733;
+  --muted:       #5f6b7a;
+  --border:      #d8dee6;
+  --primary:     #1f4e79;
+  --primary-text:#ffffff;
+  --accent-bg:   #e6eef7;
+  --error-bg:    #fdecec;
+  --error-text:  #a12622;
+  --radius:      10px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:          #12171d;
+    --surface:     #1b222b;
+    --text:        #e6ebf1;
+    --muted:       #9aa6b4;
+    --border:      #2c3642;
+    --primary:     #5b9bd5;
+    --primary-text:#0c1118;
+    --accent-bg:   #22303f;
+    --error-bg:    #3a1d1d;
+    --error-text:  #ffb4ae;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+[hidden] { display: none !important; }
+
+h1 { font-size: 1.4rem; margin: 0 0 1rem; }
+.muted { color: var(--muted); }
+
+/* ---------- Boxes, notices ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.notice {
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  margin: 0.75rem 0;
+}
+.notice.error { background: var(--error-bg); color: var(--error-text); }
+
+/* ---------- Form fields ---------- */
+label { display: block; font-weight: 600; margin: 0.9rem 0 0.3rem; }
+label.checkbox { font-weight: normal; display: flex; align-items: center; gap: 0.5rem; }
+
+input[type="email"], input[type="password"], input[type="text"] {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;               /* 16px stops phones zooming in */
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* ---------- Buttons ---------- */
+.button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  min-height: 44px;              /* easy to tap with a finger */
+}
+.button.primary { background: var(--primary); color: var(--primary-text); border-color: var(--primary); font-weight: 600; }
+.button.wide { width: 100%; margin-top: 1rem; }
+.button.small { padding: 0.4rem 0.8rem; min-height: 38px; }
+.button:disabled { opacity: 0.6; cursor: wait; }
+.icon-button { font-size: 1.3rem; padding: 0.2rem 0.7rem; }
+
+/* ---------- Login / loading pages ---------- */
+.center-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.login-card { width: 100%; max-width: 380px; }
+.brand-big { color: var(--primary); font-size: 1.8rem; margin-bottom: 0.2rem; }
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.brand { font-weight: 700; color: var(--primary); font-size: 1.15rem; }
+.user-name {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Menu ---------- */
+/* Phone: the menu is a drop-down list opened with the ☰ button. */
+.menu {
+  display: none;
+  flex-direction: column;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+}
+.menu.open { display: flex; }
+.menu a {
+  color: var(--text);
+  text-decoration: none;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+}
+.menu a:hover { background: var(--accent-bg); }
+.menu a.active { background: var(--accent-bg); color: var(--primary); font-weight: 600; }
+
+.screen { padding: 1rem; max-width: 1100px; }
+
+/* Computer: the menu sits on the left all the time. */
+@media (min-width: 800px) {
+  #menu-toggle { display: none; }
+  .layout { display: flex; align-items: flex-start; }
+  .menu {
+    display: flex;
+    position: sticky;
+    top: 57px;
+    width: 210px;
+    flex-shrink: 0;
+    min-height: calc(100vh - 57px);
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+  }
+  .screen { flex: 1; padding: 1.5rem 2rem; }
+}
