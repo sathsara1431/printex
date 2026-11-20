@@ -1,11 +1,17 @@
 // =====================================================================
 //  inventory.js – INVENTORY SCREEN (Owner and Manager)
 // ---------------------------------------------------------------------
-//  Shows every stock item (paper, ink, ...) with how much is left,
-//  and warns when it is low or below zero.
+//  An "at a glance" view of the stock:
+//    • Three boxes at the top: how many items, which ones need buying,
+//      and the one that will run out first (worked out from the last
+//      7 days of sales).
+//    • One row per item, problems first: a gauge (full = 3 × the
+//      low-stock warning level), OK / Low / Below zero, the amount in
+//      stock (in packs when easier, e.g. "2.8 reams"), and how much was
+//      used in the last 7 days with "about N days left".
 //
 //  For each item you can:
-//    • Add / remove stock – bought more, something was wasted, or you
+//    • Update stock – bought more, something was wasted, or you
 //      counted it and want the website to match your count. A note is
 //      always needed so everyone knows why.
 //    • History – the latest changes (sales take stock away by themselves).
@@ -41,6 +47,51 @@ function amountText(amount, item) {
 
 const isLow = (item) => Number(item.quantity) <= Number(item.low_stock_level);
 
+// 'below' (red), 'low' (orange) or 'ok' (green).
+function statusOf(item) {
+  if (item.quantity < 0) return 'below';
+  return isLow(item) ? 'low' : 'ok';
+}
+const STATUS_WORDS = { below: 'Below zero', low: 'Low', ok: 'OK' };
+
+// The big amount, in packs when that's easier to read: "2.8 reams" (else "480 sheets").
+function bigAmount(item) {
+  const q = item.quantity;
+  if (item.pack_unit && item.pack_size && Math.abs(q) >= item.pack_size) {
+    const packs = Math.round((q / item.pack_size) * 10) / 10;
+    return `${formatNumber(packs)} ${unitWord(item.pack_unit, packs)}`;
+  }
+  return `${formatNumber(q)} ${unitWord(item.base_unit, q)}`;
+}
+
+// How full the gauge is (0 to 1). "Full" = 3 × the low-stock warning level.
+function fullness(item) {
+  if (item.quantity <= 0) return 0;
+  const full = item.low_stock_level > 0 ? item.low_stock_level * 3 : item.quantity;
+  return Math.min(1, item.quantity / full);
+}
+
+// A half-circle gauge made of 12 little bars, coloured by status.
+function gaugeSvg(item) {
+  const bars = 12;
+  const lit = Math.round(fullness(item) * bars);
+  let lines = '';
+  for (let i = 0; i < bars; i++) {
+    const angle = Math.PI - (i / (bars - 1)) * Math.PI;   // left → right
+    const x1 = 30 + Math.cos(angle) * 17, y1 = 30 - Math.sin(angle) * 17;
+    const x2 = 30 + Math.cos(angle) * 26, y2 = 30 - Math.sin(angle) * 26;
+    lines += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+      class="${i < lit ? 'lit' : ''}"/>`;
+  }
+  return `<svg class="gauge ${statusOf(item)}" viewBox="0 0 60 34" aria-hidden="true">${lines}</svg>`;
+}
+
+// Small line icons for the buttons.
+const ICONS = {
+  history: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>',
+};
+
 const REASONS = {
   purchase:   { label: 'Bought more',          hint: 'e.g. Bought from ABC Stationers' },
   waste:      { label: 'Spoiled or wasted',    hint: 'e.g. Paper jam, damaged in rain' },
@@ -50,27 +101,68 @@ const HISTORY_LABELS = { sale: 'Sale', purchase: 'Bought', waste: 'Wasted', corr
 
 export async function render(main, { db }) {
   main.innerHTML = `
-    <h1>Inventory</h1>
+    <div class="title-row">
+      <h1>Inventory</h1>
+      <button type="button" id="inv-add-toggle" class="button small">+ Add item</button>
+    </div>
     <div id="inv-message" class="notice" role="status" hidden></div>
-    <div id="inv-summary"></div>
-    <details id="inv-add" class="card add-panel">
-      <summary>+ Add a stock item</summary>
+    <div id="inv-add" class="card add-panel" hidden>
+      <h2>Add a stock item</h2>
       <form class="item-form">${itemFields({})}
-        <div class="button-row"><button type="submit" class="button primary">Add item</button></div>
+        <div class="button-row">
+          <button type="submit" class="button primary">Add item</button>
+          <button type="button" class="button" id="inv-add-cancel">Cancel</button>
+        </div>
       </form>
-    </details>
+    </div>
+    <div id="inv-summary" class="stat-strip"></div>
     <div id="inv-list"><p class="muted">Loading…</p></div>
     <details id="inv-off" class="card help" hidden></details>`;
 
   const messageBox = main.querySelector('#inv-message');
   const say = (text, type = 'good') => showNotice(messageBox, text, type);
   let names = {};   // user id → name, for the History lists
+  let usedLastWeek = {};   // stock item id → amount taken by sales in the last 7 days
+
+  const addBox = main.querySelector('#inv-add');
+  main.querySelector('#inv-add-toggle').onclick = () => {
+    addBox.hidden = !addBox.hidden;
+    if (!addBox.hidden) addBox.querySelector('input').focus();
+  };
+  main.querySelector('#inv-add-cancel').onclick = () => {
+    addBox.querySelector('form').reset();
+    addBox.hidden = true;
+  };
+
+  // How much each item was used by sales in the last 7 days.
+  async function loadUsage() {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data } = await db.from('stock_movements')
+      .select('stock_item_id, change')
+      .eq('reason', 'sale')
+      .gte('created_at', since);
+    usedLastWeek = {};
+    (data || []).forEach((m) => {
+      usedLastWeek[m.stock_item_id] = (usedLastWeek[m.stock_item_id] || 0) - Number(m.change);
+    });
+  }
+
+  // "about 9 days left", from the last 7 days of sales.
+  function daysLeft(item) {
+    const perDay = (usedLastWeek[item.id] || 0) / 7;
+    if (perDay <= 0 || item.quantity <= 0) return null;
+    return Math.floor(item.quantity / perDay);
+  }
 
   // ---------- Loading ----------
+  let loadCounter = 0;   // only the newest refresh is shown (slow older answers are ignored)
+
   async function loadItems() {
+    const myTurn = ++loadCounter;
     const { data, error } = await db.from('stock_items')
       .select('id, name, base_unit, pack_unit, pack_size, quantity, low_stock_level, active')
       .order('name');
+    if (myTurn !== loadCounter) return;
     const listBox = main.querySelector('#inv-list');
     if (error) {
       listBox.innerHTML = '<div class="card">Could not load the stock. Please refresh the page.</div>';
@@ -82,18 +174,17 @@ export async function render(main, { db }) {
       low_stock_level: Number(i.low_stock_level),
       pack_size: i.pack_size === null ? null : Number(i.pack_size),
     }));
+    // Problems first: below zero, then low, then OK; then by name.
+    const order = { below: 0, low: 1, ok: 2 };
+    items.sort((a, b) => order[statusOf(a)] - order[statusOf(b)] || a.name.localeCompare(b.name));
     const active = items.filter((i) => i.active);
     const off = items.filter((i) => !i.active);
 
-    // Summary of problems at the top.
-    const low = active.filter(isLow);
-    main.querySelector('#inv-summary').innerHTML = low.length
-      ? `<div class="notice error">Low on stock: ${low.map((i) => escapeHtml(i.name)).join(', ')}</div>`
-      : '';
+    showSummary(active);
 
     listBox.innerHTML = active.length
-      ? `<div class="list">${active.map(itemRow).join('')}</div>`
-      : '<div class="card muted">No stock items yet. Add one above.</div>';
+      ? `<div class="list stock-list">${active.map(itemRow).join('')}</div>`
+      : '<div class="card muted">No stock items yet. Click "+ Add item" to add one.</div>';
     active.forEach((item) => wireRow(listBox.querySelector(`[data-id="${item.id}"]`), item));
 
     const offBox = main.querySelector('#inv-off');
@@ -101,8 +192,35 @@ export async function render(main, { db }) {
     offBox.innerHTML = `
       <summary>Switched-off items (${off.length})</summary>
       <p class="muted small">These have history, so they were switched off instead of deleted.</p>
-      <div class="list">${off.map(itemRow).join('')}</div>`;
+      <div class="list stock-list">${off.map(itemRow).join('')}</div>`;
     off.forEach((item) => wireRow(offBox.querySelector(`[data-id="${item.id}"]`), item));
+  }
+
+  // The four boxes across the top.
+  function showSummary(active) {
+    const needBuying = active.filter((i) => statusOf(i) !== 'ok');
+    const below = active.filter((i) => statusOf(i) === 'below').length;
+
+    const soonest = active
+      .map((i) => ({ item: i, days: daysLeft(i) }))
+      .filter((x) => x.days !== null)
+      .sort((a, b) => a.days - b.days)[0];
+
+    const stat = (label, value, sub = '', cls = '') => `
+      <div class="stat ${cls}">
+        <div class="stat-label">${label}</div>
+        <div class="stat-value">${value}</div>
+        ${sub ? `<div class="muted small">${sub}</div>` : ''}
+      </div>`;
+
+    main.querySelector('#inv-summary').innerHTML = [
+      stat('Stock items', formatNumber(active.length)),
+      stat('Need buying', formatNumber(needBuying.length),
+        needBuying.length ? escapeHtml(needBuying.map((i) => i.name).join(', ')) : 'all good',
+        needBuying.length ? (below ? 'below' : 'low') : 'ok'),
+      stat('Runs out first', soonest ? escapeHtml(soonest.item.name) : '—',
+        soonest ? `about ${formatNumber(soonest.days)} day${soonest.days === 1 ? '' : 's'} left` : 'not enough sales yet'),
+    ].join('');
   }
 
   async function loadNames() {
@@ -112,26 +230,45 @@ export async function render(main, { db }) {
 
   // ---------- One stock item ----------
   function itemRow(item) {
-    const badges = [];
-    if (item.quantity < 0) badges.push('<span class="badge off">Below zero – please count and correct</span>');
-    else if (isLow(item)) badges.push('<span class="badge off">Low stock</span>');
-
+    const status = statusOf(item);
+    const used = usedLastWeek[item.id] || 0;
+    const days = daysLeft(item);
     const packOptions = item.pack_unit && item.pack_size
       ? `<option value="pack">${escapeHtml(unitWord(item.pack_unit, 2))} (${formatNumber(item.pack_size)} each)</option>` : '';
 
     return `
       <div class="list-row" data-id="${item.id}">
-        <div class="row-main">
-          <div>
-            <div class="row-title">${escapeHtml(item.name)}</div>
-            <div class="${item.quantity < 0 ? 'error-text' : ''}">${escapeHtml(amountText(item.quantity, item))} left</div>
-            <div class="muted small">Warn at ${escapeHtml(amountText(item.low_stock_level, item))} or less</div>
+        <div class="stock-row">
+          <div class="stock-name">
+            <span class="stock-icon ${status}" aria-hidden="true">${escapeHtml(item.name.trim().charAt(0).toUpperCase())}</span>
+            <div>
+              <div class="row-title">${escapeHtml(item.name)}</div>
+              <div class="muted small">Warn at ${escapeHtml(amountText(item.low_stock_level, item))}</div>
+            </div>
           </div>
-          <div class="row-side">
-            ${badges.join('')}
-            ${item.active ? '<button type="button" class="button small open-adjust">Add / remove stock</button>' : ''}
-            <button type="button" class="button small open-history">History</button>
-            <button type="button" class="button small open-edit">Edit</button>
+
+          <div class="stock-cell stock-level">
+            ${gaugeSvg(item)}
+            <span class="status-word ${status}">${STATUS_WORDS[status]}</span>
+          </div>
+
+          <div class="stock-cell">
+            <div class="cell-label">In stock</div>
+            <div class="cell-value ${status === 'below' ? 'error-text' : ''}">${escapeHtml(bigAmount(item))}</div>
+            ${item.pack_unit && Math.abs(item.quantity) >= (item.pack_size || Infinity)
+              ? `<div class="muted small">${escapeHtml(formatNumber(item.quantity) + ' ' + unitWord(item.base_unit, item.quantity))}</div>` : ''}
+          </div>
+
+          <div class="stock-cell">
+            <div class="cell-label">Used (7 days)</div>
+            <div class="cell-value">${used ? escapeHtml(formatNumber(used) + ' ' + unitWord(item.base_unit, used)) : '—'}</div>
+            ${days !== null ? `<div class="muted small">about ${formatNumber(days)} day${days === 1 ? '' : 's'} left</div>` : ''}
+          </div>
+
+          <div class="stock-actions">
+            ${item.active ? '<button type="button" class="button small primary open-adjust">Update stock</button>' : ''}
+            <button type="button" class="icon-btn open-history" aria-label="History of ${escapeHtml(item.name)}" title="History">${ICONS.history}</button>
+            <button type="button" class="icon-btn open-edit" aria-label="Edit ${escapeHtml(item.name)}" title="Edit">${ICONS.edit}</button>
           </div>
         </div>
 
@@ -338,7 +475,7 @@ export async function render(main, { db }) {
         : 'Could not save. Please check your internet connection and try again.', 'error');
     }
     form.reset();
-    main.querySelector('#inv-add').open = false;
+    addBox.hidden = true;
     say(`Added ${values.name}. Use "Add / remove stock" → "I counted the stock" to enter how much you have now.`);
     loadItems();
   };
@@ -372,7 +509,8 @@ export async function render(main, { db }) {
     loadItems();
   }
 
-  await Promise.all([loadNames(), loadItems()]);
+  await Promise.all([loadNames(), loadUsage()]);
+  await loadItems();
 }
 
 // The fields for adding or editing a stock item.

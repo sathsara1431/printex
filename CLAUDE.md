@@ -273,9 +273,15 @@ supabase/schema.sql  tables, views, triggers, RLS rules, starting data
    category is hidden via `archived` and can be brought back) and named discounts (add, edit
    name/amount/on-off, remove; a used discount is switched off instead). "Used" is detected by the
    database refusing the delete (foreign key error `23503`). No starting discounts (owner's choice).
-6. ✅ Inventory (`js/screens/inventory.js`): stock list with amount left in base units plus packs
-   ("1,250 sheets (2 reams + 250 sheets)"), Low stock / Below zero badges and a summary at the top.
-   "Add / remove stock": Bought more (+), Spoiled or wasted (−), I counted the stock (the website
+6. ✅ Inventory (`js/screens/inventory.js`): an "at a glance" overview. Summary strip at the top
+   (Stock items · Need buying, naming the items · Runs out first, "about N days left" from the last
+   7 days of sale movements). One row per item, problems first (Below zero → Low → OK): letter
+   icon, half-circle gauge (12 bars, **full = 3 × low-stock level**, owner can later ask for a
+   "normal full stock" field instead), status word, "In stock" shown in packs when easier
+   ("2.8 reams", exact base units underneath), "Used (7 days)", then **Update stock** plus icon
+   buttons for History and Edit. On a computer (≥1000px) each row is one table-like line.
+   Only the newest list refresh is drawn (a slow older answer is ignored).
+   "Update stock": Bought more (+), Spoiled or wasted (−), I counted the stock (the website
    reads the latest quantity and inserts the difference as a `correction`); amount in base units or
    packs; a note is required. History shows the latest 30 movements with who and when; manual ones
    can be undone (deletes the movement; the trigger puts the quantity back). Add/edit items (name,
