@@ -228,8 +228,16 @@ js/app.js            login, my_menu(), menu, opening screens by #address, sign o
 js/screens/*.js      one file per screen, each exports render(main, { db, user }):
                      dashboard, sales, customers, attendance, expenses, inventory,
                      pricelist, settings (categories + discounts), users, activity, backup
-supabase/schema.sql  tables, views, triggers, RLS rules, starting data
+js/icons.js          stock item pictures (Lucide icons + licence), iconSvg, guessIcon
+supabase/schema.sql  tables, views, triggers, RLS rules, starting data (always the full,
+                     up-to-date setup for a brand-new project)
+supabase/updates/    numbered SQL changes for the EXISTING database, run once each in order
+                     in the Supabase SQL Editor (001_stock_item_icons.sql = icon column)
 ```
+
+**Database changes rule:** every change goes into BOTH `schema.sql` (so a fresh setup is complete)
+AND a new numbered file in `supabase/updates/` (for the live database). Tell the owner to run the
+update before testing the website change that needs it.
 
 ### How the website works (step 3)
 
@@ -288,6 +296,13 @@ supabase/schema.sql  tables, views, triggers, RLS rules, starting data
    ("2.8 reams", exact base units underneath), "Used (7 days)", then **Update stock** plus icon
    buttons for History and Edit. On a computer (≥1000px) each row is one table-like line.
    Only the newest list refresh is drawn (a slow older answer is ignored).
+   **Pictures:** each stock item has an optional `icon` (column `stock_items.icon`, name like
+   `droplet`, checked by the database). Icons live in `js/icons.js`: 25 Lucide line icons
+   (lucide-static 0.460.0, ISC licence notice kept in the file), `iconSvg(name)` and
+   `guessIcon(itemName)`. The add/edit form has a picture picker (radio grid, "None" = letter);
+   when adding, a picture is suggested from the name until one is picked by hand. Rows show the
+   icon tinted by status (green/orange/red), or the first letter if there is none.
+   Real photos (Supabase Storage) were discussed as a possible later addition.
    "Update stock": Bought more (+), Spoiled or wasted (−), I counted the stock (the website
    reads the latest quantity and inserts the difference as a `correction`); amount in base units or
    packs; a note is required. History shows the latest 30 movements with who and when; manual ones

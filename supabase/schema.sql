@@ -283,6 +283,7 @@ create table public.stock_items (
   quantity         numeric(12,3) not null default 0,      -- can go below zero (shown with a warning)
   low_stock_level  numeric(12,3) not null default 0 check (low_stock_level >= 0),
   active           boolean not null default true,
+  icon             text check (icon ~ '^[a-z0-9-]{1,40}$'),  -- picture name, e.g. 'droplet' (optional)
   created_at       timestamptz not null default now(),
   created_by       uuid,
   updated_at       timestamptz not null default now(),
@@ -1102,8 +1103,8 @@ grant update (full_name, role, active) on public.profiles to authenticated;
 -- Stock quantity can only change through stock movements.
 revoke all on public.stock_items from authenticated;
 grant select, delete on public.stock_items to authenticated;
-grant insert (name, base_unit, pack_unit, pack_size, low_stock_level, active) on public.stock_items to authenticated;
-grant update (name, base_unit, pack_unit, pack_size, low_stock_level, active) on public.stock_items to authenticated;
+grant insert (name, base_unit, pack_unit, pack_size, low_stock_level, active, icon) on public.stock_items to authenticated;
+grant update (name, base_unit, pack_unit, pack_size, low_stock_level, active, icon) on public.stock_items to authenticated;
 
 -- Stock movements can be added or removed, never edited (add a correction instead).
 revoke update on public.stock_movements from authenticated;
@@ -1263,8 +1264,8 @@ insert into public.expense_categories (name, sort_order) values
 
 -- A4 paper, counted in sheets; 1 ream = 500 sheets. Warn below 1 ream.
 -- (Starts at 0 – add your current stock as a "purchase" or "correction".)
-insert into public.stock_items (name, base_unit, pack_unit, pack_size, low_stock_level)
-values ('A4 paper', 'sheet', 'ream', 500, 500);
+insert into public.stock_items (name, base_unit, pack_unit, pack_size, low_stock_level, icon)
+values ('A4 paper', 'sheet', 'ream', 500, 500, 'file');
 
 -- A4 prices (per sheet). A3/A5 will be added later in the Price List screen.
 insert into public.price_items (item_group, name, paper_size, sides, colour, price, sort_order) values

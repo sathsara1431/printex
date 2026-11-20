@@ -16,7 +16,8 @@
 //      always needed so everyone knows why.
 //    • History – the latest changes (sales take stock away by themselves).
 //      A manual change made by mistake can be undone here.
-//    • Edit – name, units (e.g. sheet / ream of 500) and low-stock level.
+//    • Edit – name, units (e.g. sheet / ream of 500), low-stock level and
+//      picture (from js/icons.js; suggested from the name when adding).
 //
 //  The amount left is NEVER typed in directly: the database works it out
 //  from all the changes, so it can't be fiddled.
@@ -26,6 +27,13 @@ import {
   escapeHtml, formatDate, formatTime, formatNumber,
   parseNumberInput, showNotice,
 } from '../helpers.js';
+import { ICONS, iconSvg, guessIcon } from '../icons.js';
+
+// Shown if the database hasn't had update 001 (the "icon" column) yet.
+const NEEDS_UPDATE = 'The database needs a small update first: run supabase/updates/001_stock_item_icons.sql ' +
+  'in the Supabase SQL Editor, then refresh this page.';
+const isMissingIconColumn = (error) =>
+  ['42703', 'PGRST204'].includes(error?.code) || /icon/i.test(error?.message || '');
 
 // "sheet" → "sheets" (short units like "ml" or "kg" stay the same).
 function unitWord(unit, amount) {
@@ -87,7 +95,7 @@ function gaugeSvg(item) {
 }
 
 // Small line icons for the buttons.
-const ICONS = {
+const BUTTON_ICONS = {
   history: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>',
 };
@@ -160,12 +168,13 @@ export async function render(main, { db }) {
   async function loadItems() {
     const myTurn = ++loadCounter;
     const { data, error } = await db.from('stock_items')
-      .select('id, name, base_unit, pack_unit, pack_size, quantity, low_stock_level, active')
+      .select('id, name, base_unit, pack_unit, pack_size, quantity, low_stock_level, active, icon')
       .order('name');
     if (myTurn !== loadCounter) return;
     const listBox = main.querySelector('#inv-list');
     if (error) {
-      listBox.innerHTML = '<div class="card">Could not load the stock. Please refresh the page.</div>';
+      listBox.innerHTML = `<div class="card">${isMissingIconColumn(error)
+        ? NEEDS_UPDATE : 'Could not load the stock. Please refresh the page.'}</div>`;
       return;
     }
     const items = data.map((i) => ({
@@ -240,7 +249,9 @@ export async function render(main, { db }) {
       <div class="list-row" data-id="${item.id}">
         <div class="stock-row">
           <div class="stock-name">
-            <span class="stock-icon ${status}" aria-hidden="true">${escapeHtml(item.name.trim().charAt(0).toUpperCase())}</span>
+            <span class="stock-icon ${status}" aria-hidden="true">${ICONS[item.icon]
+              ? iconSvg(item.icon)
+              : escapeHtml(item.name.trim().charAt(0).toUpperCase())}</span>
             <div>
               <div class="row-title">${escapeHtml(item.name)}</div>
               <div class="muted small">Warn at ${escapeHtml(amountText(item.low_stock_level, item))}</div>
@@ -267,8 +278,8 @@ export async function render(main, { db }) {
 
           <div class="stock-actions">
             ${item.active ? '<button type="button" class="button small primary open-adjust">Update stock</button>' : ''}
-            <button type="button" class="icon-btn open-history" aria-label="History of ${escapeHtml(item.name)}" title="History">${ICONS.history}</button>
-            <button type="button" class="icon-btn open-edit" aria-label="Edit ${escapeHtml(item.name)}" title="Edit">${ICONS.edit}</button>
+            <button type="button" class="icon-btn open-history" aria-label="History of ${escapeHtml(item.name)}" title="History">${BUTTON_ICONS.history}</button>
+            <button type="button" class="icon-btn open-edit" aria-label="Edit ${escapeHtml(item.name)}" title="Edit">${BUTTON_ICONS.edit}</button>
           </div>
         </div>
 
@@ -449,6 +460,7 @@ export async function render(main, { db }) {
       pack_unit: form.pack_unit.value.trim().toLowerCase() || null,
       pack_size: form.pack_size.value.trim() ? parseNumberInput(form.pack_size.value) : null,
       low_stock_level: parseNumberInput(form.low_stock_level.value || '0'),
+      icon: ICONS[form.icon.value] ? form.icon.value : null,
     };
     if (!values.name) return say('Please type the item name.', 'error');
     if (!values.base_unit) return say('Please type what it is counted in, e.g. sheet or bottle.', 'error');
@@ -470,25 +482,37 @@ export async function render(main, { db }) {
     const values = readItemForm(form);
     if (!values) return;
     const { error } = await db.from('stock_items').insert(values);
-    if (error) {
-      return say(error.code === '23505' ? 'A stock item with that name already exists.'
-        : 'Could not save. Please check your internet connection and try again.', 'error');
-    }
+    if (error) return say(saveProblem(error), 'error');
     form.reset();
+    delete form.dataset.iconChosen;
     addBox.hidden = true;
-    say(`Added ${values.name}. Use "Add / remove stock" → "I counted the stock" to enter how much you have now.`);
+    say(`Added ${values.name}. Use "Update stock" → "I counted the stock" to enter how much you have now.`);
     loadItems();
   };
+
+  // While adding an item, suggest a picture from its name (until one is picked by hand).
+  const addForm = main.querySelector('#inv-add form');
+  addForm.name.addEventListener('input', () => {
+    if (addForm.dataset.iconChosen) return;
+    const guess = guessIcon(addForm.name.value);
+    addForm.querySelector(`input[name="icon"][value="${guess}"]`).checked = true;
+  });
+  addForm.querySelector('.icon-picker').addEventListener('change', () => {
+    addForm.dataset.iconChosen = 'yes';
+  });
+
+  function saveProblem(error) {
+    if (error.code === '23505') return 'A stock item with that name already exists.';
+    if (isMissingIconColumn(error)) return NEEDS_UPDATE;
+    return 'Could not save. Please check your internet connection and try again.';
+  }
 
   async function saveItem(item, form) {
     const values = readItemForm(form);
     if (!values) return;
     values.active = form.active.checked;
     const { error } = await db.from('stock_items').update(values).eq('id', item.id);
-    if (error) {
-      return say(error.code === '23505' ? 'A stock item with that name already exists.'
-        : 'Could not save. Please check your internet connection and try again.', 'error');
-    }
+    if (error) return say(saveProblem(error), 'error');
     say(`Saved ${values.name}.`);
     loadItems();
   }
@@ -533,5 +557,23 @@ function itemFields(item) {
     </div>
     <label>Warn me when it is at or below (in the smallest unit)
       <input type="text" name="low_stock_level" inputmode="decimal" value="${item.low_stock_level !== undefined ? Number(item.low_stock_level) : ''}" placeholder="e.g. 500">
+    </label>
+    ${iconPicker(item.icon)}`;
+}
+
+// A grid of pictures to choose from. "None" shows the item's first letter instead.
+function iconPicker(current) {
+  const chosen = ICONS[current] ? current : '';
+  const choice = (value, picture, label) => `
+    <label class="icon-choice" title="${escapeHtml(label)}">
+      <input type="radio" name="icon" value="${value}" ${value === chosen ? 'checked' : ''}>
+      <span class="icon-tile">${picture}</span>
+      <span class="icon-name">${escapeHtml(label)}</span>
     </label>`;
+  return `
+    <fieldset class="icon-picker">
+      <legend>Picture</legend>
+      ${choice('', '<span class="icon-letter">Aa</span>', 'None')}
+      ${Object.entries(ICONS).map(([name, icon]) => choice(name, iconSvg(name), icon.label)).join('')}
+    </fieldset>`;
 }
