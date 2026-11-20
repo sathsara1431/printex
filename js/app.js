@@ -19,6 +19,10 @@ import { loginEmailFrom, loginNameFromEmail } from './usernames.js';
 // so nobody can find out which usernames exist.
 const WRONG_LOGIN = 'Wrong username, email or password. Please try again.';
 
+// The website's version number, taken from the "?v=" on app.js in index.html.
+// Screen files are loaded with the same "?v=", so a new version is always downloaded fresh.
+const APP_VERSION = new URL(import.meta.url).searchParams.get('v') || 'dev';
+
 let allowedScreens = null;   // the list from my_menu(); null when signed out
 let currentUser = null;
 let routeCounter = 0;        // makes sure only the latest screen request is shown
@@ -161,7 +165,7 @@ async function openScreenFromAddress() {
   main.innerHTML = '<p class="muted">Loading…</p>';
 
   try {
-    const screen = await import('./screens/' + SCREENS[name].file);
+    const screen = await import(`./screens/${SCREENS[name].file}?v=${APP_VERSION}`);
     if (myTurn !== routeCounter) return;   // the person already clicked something else
     main.innerHTML = '';
     await screen.render(main, { db, user: currentUser });

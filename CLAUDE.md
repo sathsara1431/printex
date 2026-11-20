@@ -22,6 +22,11 @@ and say exactly what to click or type.
 - **Local testing:** the folder is inside XAMPP, so it can be tested at `http://localhost/printex/`.
   `.htaccess` sends `Cache-Control: no-cache` for html/js/css so browsers always pick up changes
   (GitHub Pages ignores it; there, changes can take up to 10 minutes to appear).
+- **Version number (cache busting):** `index.html` loads `css/style.css?v=X` and `js/app.js?v=X`;
+  `app.js` reads X from its own address and loads every screen as `screens/<file>.js?v=X`.
+  **Whenever a screen, app.js or style.css changes, bump X on both lines in index.html**
+  (format `YYYY-MM-DD.N`, e.g. `2026-11-20.1` → `2026-11-20.2`). Without this, browsers can keep
+  showing an old screen, because screen files are loaded later and a page refresh doesn't reach them.
 
 ## Roles
 
