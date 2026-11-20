@@ -1,0 +1,14 @@
+# =====================================================================
+#  .htaccess – SETTINGS FOR XAMPP (Apache) ONLY
+#  Tells the browser to check for a newer version of the page, scripts
+#  and styles every time, so changes show up straight away while testing.
+#  (If nothing changed, the browser still uses its saved copy – it's quick.)
+#  GitHub Pages ignores this file; there, changes can take up to
+#  10 minutes to show.
+# =====================================================================
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

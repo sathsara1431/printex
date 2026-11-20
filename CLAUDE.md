@@ -20,6 +20,8 @@ and say exactly what to click or type.
   database triggers/functions check the user's role. Hiding a screen is only for tidiness.
 - **Phone first:** designed for a phone screen first, also works on a computer.
 - **Local testing:** the folder is inside XAMPP, so it can be tested at `http://localhost/printex/`.
+  `.htaccess` sends `Cache-Control: no-cache` for html/js/css so browsers always pick up changes
+  (GitHub Pages ignores it; there, changes can take up to 10 minutes to appear).
 
 ## Roles
 
